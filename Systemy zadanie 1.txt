@@ -1,0 +1,57 @@
+1. cd~ 
+2. mkdir zadanie
+3. chmod o-rx zadanie
+4. cd zadanie
+5. touch produkty.csv
+6. echo "nazwa, cena, ilosc" > zadanie.csve
+7. cho -e "arbuz,10.50,1\nbanan,2,10\njablko,3.5,3\ngruszka,7,2"
+
+8. cat .produkty.csv
+	nazwa,cena,ilosc
+	arbuz,10.50,1
+	banan,2,10
+	jablko,3.5,3
+	gruszka,7,2
+
+9. touch .archiwum.csv
+
+10. ls -la 
+	-rw-rw-r-- 1 student student 67 cze 15 13:18 produkty.csv
+	
+11.find /usr -type f -name "*conf*"
+	(bardzo dużo plików)
+	
+12.sudo find / -type d -name "*log*" > log.txt
+
+13. tail -n +2 produkty.csv | sort -t',' -k2 -n | nl -s'.' > .archiwum2.csv
+
+14. diff .archiwum.csv .archiwum2.csv
+	0a1,4
+	>      1,banan,2,10
+	>      2,jablko,3.5,3
+	>      3,gruszka,7,2
+	>      4,arbuz,10.50,1
+	
+15.sed 's/,/ /g' .archiwum2.csv
+     1 banan 2 10
+     2 jablko 3.5 3
+     3 gruszka 7 2
+     4 arbuz 10.50 1
+
+16. sed -n '/,[^,]*9[^,]*,/p' produkty.csv
+
+17.  df -h | awk 'NR>1 {used+=$3; avail+=$4; print $6} END {print "SUMA użycia: " used "G"; print "SUMA wolnego: " avail "G"}'
+	/run
+	/
+	/dev/shm
+	/run/lock
+	/sys/firmware/efi/efivars
+	/boot/efi
+	/run/user/1000
+	/media/student/suse156
+	SUMA użycia: 386,8G
+	SUMA wolnego: 621,9G
+	
+
+
+	
