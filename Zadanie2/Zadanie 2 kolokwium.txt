@@ -1,0 +1,145 @@
+1. 	mkdir ipc_project
+	cd ipc_project
+	
+2.1. 	cat <<EOF > server.h
+	#ifndef SERVER_H
+	#define SERVER_H
+
+	void run_server();
+
+	#endif
+	EOF
+	
+2.2.	cat <<EOF > client.h
+	#ifndef CLIENT_H
+	#define CLIENT_H
+
+	void run_client(const char* name, int read_fd, int write_fd);
+
+	#endif
+	EOF
+	
+2.3. 
+cat <<EOF > server.c
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include "server.h"
+
+void run_server() {
+    int i;
+    int pipefd[4][2][2]; // [client][read=0/write=1][0/1]
+    const char *names[4] = {"Anna", "Paul", "Rick", "Nina"};
+
+    for (i = 0; i < 4; ++i) {
+        pipe(pipefd[i][0]); // server -> client
+        pipe(pipefd[i][1]); // client -> server
+
+        pid_t pid = fork();
+        if (pid == 0) {
+            dup2(pipefd[i][0][0], STDIN_FILENO);  // read from server
+            dup2(pipefd[i][1][1], STDOUT_FILENO); // write to server
+            close(pipefd[i][0][1]);
+            close(pipefd[i][1][0]);
+            execl("./client", "./client", names[i], NULL);
+        }
+        close(pipefd[i][0][0]);
+        close(pipefd[i][1][1]);
+
+        write(pipefd[i][0][1], "Hello clients! Who are you?\n", 29);
+        char buffer[100];
+        read(pipefd[i][1][0], buffer, sizeof(buffer));
+        printf("Server received: %s", buffer);
+
+        write(pipefd[i][0][1], "Hello clients! Your PID?\n", 26);
+        read(pipefd[i][1][0], buffer, sizeof(buffer));
+        printf("Server received: %s", buffer);
+    }
+}
+EOF
+
+2.4.
+cat <<EOF > client.c
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+#include <string.h>
+#include "client.h"
+
+char client_name[100];
+
+void handle_sigterm(int sig) {
+    printf("%s: Terminating...\\n", client_name);
+    exit(0);
+}
+
+void handle_sigusr2(int sig) {
+    printf("%s: Acknowledged\\n", client_name);
+}
+
+void handle_sigint(int sig) {
+    printf("%s: Shutting down\\n", client_name);
+    exit(0);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Client: Name not provided\\n");
+        return 1;
+    }
+
+    strncpy(client_name, argv[1], sizeof(client_name));
+    printf("Imię: %s initialized\\n", client_name);
+
+    signal(SIGTERM, handle_sigterm);
+    signal(SIGUSR2, handle_sigusr2);
+    signal(SIGINT, handle_sigint);
+
+    char msg[100];
+    while (fgets(msg, sizeof(msg), stdin)) {
+        if (strstr(msg, "Who are you"))
+            printf("I am %s\\n", client_name);
+        else if (strstr(msg, "PID"))
+            printf("%s: PID is %d\\n", client_name, getpid());
+        else
+            printf("%s: Unknown message\\n", client_name);
+    }
+    return 0;
+}
+EOF
+
+
+3. 
+
+cat <<EOF > Makefile
+CC=gcc
+CFLAGS=-Wall -g
+
+all: server client main
+
+server: server.c
+	\$(CC) \$(CFLAGS) -c server.c
+
+client: client.c
+	\$(CC) \$(CFLAGS) -o client client.c
+
+main: main.c server.o
+	\$(CC) \$(CFLAGS) main.c server.o -o main
+
+clean:
+	rm -f *.o client main
+EOF
+
+4. make
+
+5. ./main
+
+
+TEST:
+student@student:~/zadanie/ipc_project$ echo "Hello clients! Who are you?" | ./client Anna
+	Imię: Anna initialized
+	I am Anna
+
+
+
